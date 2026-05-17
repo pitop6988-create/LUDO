@@ -1,0 +1,114 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Public and private user data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "balance": { "type": "integer" },
+        "referralCode": { "type": "string" },
+        "referredBy": { "type": "string", "format": "nullable" },
+        "totalGames": { "type": "integer" },
+        "wins": { "type": "integer" },
+        "isAdmin": { "type": "boolean" },
+        "currentFrame": { "type": "string" },
+        "currentTheme": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "lastRewardClaimedAt": { "type": "integer" },
+        "ownedFrames": { "type": "array", "items": { "type": "string" } },
+        "ownedDiceSkins": { "type": "array", "items": { "type": "string" } },
+        "equippedDiceSkin": { "type": "string" }
+      },
+      "required": ["uid", "name", "email", "balance"]
+    },
+    "Game": {
+      "title": "Ludo Game State",
+      "description": "Active game session data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roomCode": { "type": "string" },
+        "status": { "type": "string", "enum": ["waiting", "starting", "playing", "finished"] },
+        "maxPlayers": { "type": "integer" },
+        "currentTurn": { "type": "string" },
+        "diceValue": { "type": "integer", "format": "nullable" },
+        "winner": { "type": "string", "format": "nullable" },
+        "createdAt": { "type": "integer" },
+        "updatedAt": { "type": "integer" }
+      }
+    },
+    "AdminConfig": {
+      "title": "Admin Configuration",
+      "description": "Global settings for frames and themes",
+      "type": "object",
+      "properties": {
+        "availableFrames": { "type": "array" },
+        "availableThemes": { "type": "array" }
+      }
+    },
+    "Frame": {
+      "title": "Shop Frame",
+      "description": "Custom profile border in the shop",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "asset": { "type": "string" },
+        "price": { "type": "integer" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["id", "name", "asset", "price"]
+    },
+    "DiceSkin": {
+      "title": "Dice Skin",
+      "description": "Custom dice appearance in the shop",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "faces": { 
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "price": { "type": "integer" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["id", "name", "faces", "price"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/games/{gameId}": {
+      "schema": "Game",
+      "description": "Game sessions"
+    },
+    "/frames/{frameId}": {
+      "schema": "Frame",
+      "description": "Available shop frames"
+    },
+    "/dice_skins/{skinId}": {
+      "schema": "DiceSkin",
+      "description": "Available dice skins"
+    },
+    "/system/config": {
+      "schema": "AdminConfig",
+      "description": "Global admin settings"
+    },
+    "/users/{userId}/history/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Transaction logs"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    }
+  }
+}

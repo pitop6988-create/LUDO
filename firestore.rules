@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'traleague@gmail.com' ||
+        request.auth.token.email == 'zaxoking1122@gmail.com'
+      );
+    }
+
+    // Validation Blueprints
+    function isValidUser(data) {
+      return data.uid is string && 
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.balance is number && data.balance >= 0 &&
+             data.referralCode is string &&
+             data.totalGames is number &&
+             data.wins is number &&
+             data.history is list &&
+             (data.get('ownedFrames', null) == null || data.ownedFrames is list) &&
+             (data.get('ownedDiceSkins', null) == null || data.ownedDiceSkins is list) &&
+             (data.get('equippedDiceSkin', null) == null || data.equippedDiceSkin is string) &&
+             (data.get('notifications', null) == null || data.notifications is list) &&
+             (data.get('referredBy', null) == null || data.referredBy is string) &&
+             (data.get('lastRewardClaimedAt', null) == null || data.lastRewardClaimedAt is number) &&
+             (data.get('avatarUrl', null) == null || (data.avatarUrl is string && data.avatarUrl.size() <= 1000));
+    }
+
+    function isValidGame(data) {
+      return data.roomCode is string && data.roomCode.size() == 6 &&
+             data.status in ['waiting', 'starting', 'playing', 'finished'] &&
+             data.players is list && data.players.size() <= 4 &&
+             data.maxPlayers is number && (data.maxPlayers == 2 || data.maxPlayers == 4);
+    }
+
+    function isValidFrame(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.asset is string && data.asset.size() <= 1000000 &&
+             data.price is number && data.price >= 0;
+    }
+
+    function isValidDiceSkin(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.faces is list && data.faces.size() == 6 &&
+             data.price is number && data.price >= 0;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && 
+                      isValidUser(incoming()) && 
+                      incoming().balance <= 50; 
+      allow update: if isOwner(userId) && 
+                      (
+                        incoming().diff(existing()).affectedKeys().hasOnly([
+                          'name', 'currentFrame', 'currentTheme', 'avatarUrl', 
+                          'balance', 'history', 'lastRewardClaimedAt', 
+                          'ownedFrames', 'ownedDiceSkins', 'equippedDiceSkin',
+                          'notifications', 'totalGames', 'wins', 'referredBy'
+                        ]) ||
+                        isAdmin()
+                      );
+    }
+
+    match /games/{gameId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidGame(incoming());
+      allow update: if isSignedIn() && (
+        // Allow joining
+        (incoming().diff(existing()).affectedKeys().hasOnly(['players', 'updatedAt'])) ||
+        // Allow game actions if it's the user's turn (simplified for now)
+        (incoming().diff(existing()).affectedKeys().hasAny(['diceValue', 'players', 'status', 'currentTurn', 'canRoll', 'canMove', 'winner', 'updatedAt']))
+      );
+    }
+
+    match /frames/{frameId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidFrame(incoming());
+    }
+
+    match /dice_skins/{skinId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidDiceSkin(incoming());
+    }
+
+    match /system/config {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+    }
+  }
+}

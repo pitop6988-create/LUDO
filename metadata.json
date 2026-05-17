@@ -1,0 +1,8 @@
+{
+  "name": "Ludo Master Pro",
+  "description": "A feature-rich Ludo mobile game with multiplayer, real-time sync, money system, and admin controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
